@@ -1,0 +1,14 @@
+# File produced by Open Asset Import Library (http://www.assimp.sf.net)
+# (assimp v5.4.4108939008)
+
+newmtl sandeliwulongcha_02
+Kd 1 1 1
+d 1
+illum 1
+map_Kd ./sandeliwulongcha1_material_0_BaseColor.png
+map_d ./op.png
+
+newmtl sandeliwulongcha_01
+Kd 1 1 1
+illum 1
+

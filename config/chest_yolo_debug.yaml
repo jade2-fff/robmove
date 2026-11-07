@@ -1,0 +1,49 @@
+# 胸口双路 YOLO 调试。修改后重新启动调试程序即可生效。
+model:
+  weights: yolo11s-seg.pt
+  image_size: 480
+  device: 0
+  precision_bits: 16
+  iou: 0.70
+  max_detections: 300
+  warmup_runs: 4
+
+confidence:
+  # 没有单独配置的类别使用 default。分数等于阈值时也通过。
+  default: 0.40
+  per_class:
+    person: 0.55
+
+capture:
+  cameras:
+    - LEFT_FRONT_SURROUND_CAMERA
+    - RIGHT_FRONT_SURROUND_CAMERA
+  bitrate_bps: 160000  # 每路 H.264
+  keyframe_interval: 60
+  duration_seconds: 180
+  encoder_queue_frames: 90
+  output_queue_chunks: 160
+
+preview:
+  title: Galbot G1 - Chest YOLO11 COCO Debug
+  camera_labels: [CHEST LEFT, CHEST RIGHT]
+  width: 480  # 每路画面宽度
+  height: 384
+  fps: 30  # 本机预览和回放的播放速率，采集帧率由相机决定
+  header_height: 46
+  decoder_threads: 2
+  queue_frames: 18
+  fps_window_frames: 151
+  report_every_frames: 90
+  show_boxes: true
+  show_masks: true
+  show_labels: true
+  show_confidence: true
+  line_width: 2
+  font_size: 0.58
+
+replay:
+  start_frame: 150
+  frame_count: 240
+  preset: veryfast
+  crf: 20

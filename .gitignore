@@ -1,0 +1,15 @@
+/build/
+/out/
+/logs/
+/work/
+/.agents/
+/.codex/
+/.aws/
+/.venv/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+CMakeUserPresets.json
+compile_commands.json

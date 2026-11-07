@@ -1,0 +1,28 @@
+{
+  "measured_at_utc": "2026-11-07T03:57:19.142960+00:00",
+  "platform": "Linux-7.0.0-42-generic-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "python_version": "3.12.3",
+  "numpy_version": "1.26.4",
+  "scope": "CPU grasp-planning kernel only; no SDK, image inference, networking or motion",
+  "repeats": 5,
+  "python_iterations_per_repeat": 10000,
+  "native_iterations_per_repeat": 500000,
+  "python_ns_per_plan": [
+    51387.1888,
+    46964.4347,
+    46968.2356,
+    48222.1382,
+    48423.0282
+  ],
+  "cpp_ns_per_plan": [
+    107.834118,
+    109.77179,
+    108.874202,
+    115.653632,
+    108.06926
+  ],
+  "python_median_ns": 48222.1382,
+  "cpp_median_ns": 108.874202,
+  "median_speedup": 442.91611156883613
+}
