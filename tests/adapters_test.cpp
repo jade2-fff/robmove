@@ -1,7 +1,5 @@
 #include "test_support.hpp"
 #include "robmove/adapters/replay.hpp"
-#include "robmove/adapters/simulated_robot.hpp"
-#include "robmove/workflow.hpp"
 #include <sstream>
 
 using namespace robmove;
@@ -28,17 +26,4 @@ TEST(replay_rejects_malformed_statuses_unknown_fields_and_poses) {
              R"({"framez":[]})", R"({"frames":[],"schema_version":999})"}) {
         std::istringstream input(value); THROWS(read_replay(input));
     }
-}
-
-TEST(simulated_backend_completes_a_workflow_and_remains_offline) {
-    SimulatedRobot robot;
-    VirtualClock clock;
-    ReplayPerception perception(demo_frames());
-    Workflow workflow(Config{}, robot, perception, clock);
-    CHECK(workflow.run(Mode::Single).success);
-    CHECK(!robot.initialized());
-    CHECK(robot.commands().front().operation == "initialize");
-    CHECK(robot.commands().back().operation == "shutdown");
-    CHECK(!robot.move_pose(Pose{}, 1, true));
-    CHECK(clock.now() >= 0.3 && clock.now() < 1);
 }

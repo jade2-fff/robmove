@@ -74,9 +74,4 @@ std::optional<double> robust_depth(std::span<const float> depth, int width, int 
     return (static_cast<double>(*middle) + *std::max_element(scratch.begin(), middle)) / 2;
 }
 
-double gripper_close_width(double object_width, double margin, double minimum) {
-    if (!std::isfinite(object_width) || object_width <= 0 || !std::isfinite(margin) || margin < 0 ||
-        !std::isfinite(minimum) || minimum <= 0) throw std::invalid_argument("invalid gripper width");
-    return std::max(minimum, object_width - margin);
-}
 }  // namespace robmove

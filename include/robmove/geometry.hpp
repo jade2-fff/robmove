@@ -14,5 +14,4 @@ Vec3 back_project(double u, double v, double depth_m, const CameraIntrinsics& in
 // Tightly packed row-major float32 depth in meters. Scratch storage is reusable.
 std::optional<double> robust_depth(std::span<const float> depth, int width, int height,
                                    int u, int v, int radius, std::vector<float>& scratch);
-double gripper_close_width(double object_width, double margin, double minimum = 0.005);
 }  // namespace robmove

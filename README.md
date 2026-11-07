@@ -1,12 +1,12 @@
-# robmove — C++20 抓取流程工程
+# robmove — 视觉感知与位姿回放
 
-把原 G1 Python 抓放流程的规划计算、任务编排、动作执行逻辑和配置迁入独立 C++ 库。提供可运行的离线 CLI、位姿回放、模拟机器人、自动测试及性能基准。
+项目保留相机读取、YOLO 分割、FoundationPose 物体位姿估计参考，以及可独立构建的 C++20 几何、感知配置和离线回放工具。0.2.0 已移除机械臂、夹爪、电机与导航控制、抓取规划、动作编排及对应模拟器。
 
-**当前范围：本机 C++ 核心。** 可执行程序只使用模拟后端，尚未接入真实 Galbot SDK、相机或 YOLO/FoundationPose 推理。设备版本确认后可通过接口接入。项目保留 Python 参考实现、YOLO11n 分割权重和 CAD 资源；YOLO26 权重已移除，默认模型路径已同步更新。
+C++ 命令行处理记录好的感知结果；它不加载推理模型，也不连接设备。Python 感知模块保留现有相机读取适配，需要匹配实际设备的 SDK 和推理环境。项目保留 YOLO11n 权重及五类物体的 CAD/纹理，YOLO26 权重已移除。
 
-## 构建与运行
+## 构建与检查
 
-需要 C++20 编译器、CMake 3.21+（使用预设时）、Ninja、Eigen 3 和 nlohmann/json。构建不联网、不自动下载依赖。本机已有所需依赖；其他 Ubuntu 环境对应开发包为 `libeigen3-dev`、`nlohmann-json3-dev`、`ninja-build`。
+需要 C++20 编译器、CMake 3.21+、Ninja、Eigen 3 和 nlohmann/json。构建不联网、不自动下载依赖。Ubuntu 开发包包括 `libeigen3-dev`、`nlohmann-json3-dev`、`ninja-build`。
 
 ```bash
 git clone https://github.com/jade2-fff/robmove.git
@@ -14,111 +14,64 @@ cd robmove
 cmake --preset release
 cmake --build --preset release --parallel 2
 ctest --preset release
-
-# 单次抓取、原地放回、归位（模拟）
-./build/release/robmove --demo
-
-# 循环抓取、放置，连续空场后回原点（模拟导航）
-./build/release/robmove --demo --mode cyclic --config config/simulation.json
-
-# 回放候选位姿，输出 JSON Lines 日志与模拟指令轨迹
-./build/release/robmove --replay examples/replay.json \
-  --config config/default.json --json --trace build/trace.json
 ```
 
-`--demo` 使用内置演示观测；`--replay` 读取实际或合成位姿记录；二者互斥。默认使用虚拟时钟，无需等待模拟动作；`--realtime` 可演示等待与 Ctrl+C 取消。无参数或 `--help` 显示帮助。
+## 离线感知回放
 
-退出码：`0` 完成或确认有效空场，`1` 参数/配置/输出错误，`2` 执行进入 HOLD，`130` 用户中断。模拟器不计算 IK、动力学或真实碰撞。
+```bash
+# 输出内置演示观测
+./build/release/robmove --demo --json
+
+# 输出记录中的所有物体候选、位置与姿态
+./build/release/robmove --replay examples/replay.json --json
+
+# 校验感知配置
+./build/release/robmove --config config/default.json --validate-config
+```
+
+`--demo` 和 `--replay` 互斥。JSON Lines 输出包含每帧 `observation`，最后是帧数、候选总数和不可用帧数的 `summary`。读取有限帧后退出。退出码：`0` 有效回放完成，`1` 参数、配置或数据错误，`2` 没有观测帧或包含不可用帧。
+
+旧的 `--mode`、`--trace`、`--realtime` 参数及 `robot`、`navigation`、`task` 配置块已移除，传入时会明确报错。
 
 ## 工程结构
 
 ```text
-app/                      命令行入口、事件输出
-include/robmove/           公共 C++ API、类型、端口
-src/                      配置、几何、规划、任务执行、状态机
-src/adapters/             JSON 感知回放、模拟机器人
-config/                   默认参数与模拟导航路点
-examples/replay.json       可直接运行的回放输入
-tests/                    行为、异常、原算法对照、CLI、安装测试
-benchmarks/               规划性能基准及本机采样
-cmake/                    可安装的 find_package 配置
-docs/                     架构、迁移范围、验证记录
-pick_place_pipeline/      保留的原 Python 参考实现
-assets/                   原模型、CAD、纹理
-migration_manifest.json   原始文件来源与哈希
+app/                      只读感知回放命令行
+include/robmove/           感知类型、配置、几何与接口
+src/                      几何计算、配置校验
+src/adapters/             JSON 感知回放
+config/                   感知与胸部 YOLO 调试配置
+examples/replay.json       离线观测示例
+tests/                    几何、配置、回放、CLI、安装与资源完整性检查
+pick_place_pipeline/      保留的 Python 感知、配置、坐标变换和日志模块
+assets/                   YOLO11n 权重、物体 CAD 和纹理
+migration_manifest.json   当前文件哈希、原始来源及移除记录
 ```
 
-核心库使用固定大小 Eigen 数据结构；任务编排不依赖 SDK 类型。`RobotPort`、`PerceptionPort`、`Clock`、`EventSink` 分别隔离设备、感知、时间和日志。新物料通过配置扩展，新设备/推理实现通过端口替换。
+`Candidate.object_pose` 表示 `base_link <- object`，位置和宽度使用米，四元数顺序为 `[qx,qy,qz,qw]`。输出描述观测到的物体，不生成执行轨迹。
 
-## 配置与接入
+## 感知配置
 
-修改 `config/default.json` 中的机器人、夹爪和重试参数。字段采用严格校验，拼写错误和重复 JSON key 会报错。路径相对配置文件的 `resource_root` 解析，与进程工作目录无关。
-
-```bash
-./build/release/robmove --config config/default.json --validate-config
-```
-
-默认五类物料与原配置一致。新增物料示例：
+`config/default.json` 只保留感知参数。物料定义只包含 CAD 路径，类别别名按 key 合并默认目录。相对路径以配置文件的 `resource_root` 为基准。
 
 ```json
 {
   "resource_root": "..",
   "perception": {
-    "objects": {
-      "new_box": {
-        "mesh_path": "assets/objects/new_box/normalized.obj",
-        "grasp_point_object": [0.0, 0.0, 0.08],
-        "pre_grasp_distance": 0.08,
-        "gripper_ee_distance": 0.18
-      }
-    },
+    "objects": {"new_box": {"mesh_path": "assets/objects/new_box/normalized.obj"}},
     "aliases": {"new box": "new_box"}
   }
 }
 ```
 
-物料与别名按 key 合并默认配置。真实模型是否包含新增类别，仍由后续感知接入验证。`config/simulation.json` 内的导航坐标仅供模拟。
+配置检查只验证字段和数值，不代表已验证模型类别、推理精度或设备兼容性。
 
-详细约定见 [架构与设备接入](docs/architecture.md)；模块映射、行为调整和验证范围见 [迁移记录](docs/migration.md)。
-
-## 检查与性能
+## 库与协作
 
 ```bash
-cmake --preset dev
-cmake --build --preset dev --parallel 2
-ctest --preset dev
-
-cmake --preset asan
-cmake --build --preset asan --parallel 2
-ctest --preset asan
+cmake --install build/release --prefix "$PWD/out/perception-install"
 ```
 
-如果运行环境明确报告 LeakSanitizer 无法在 ptrace 下工作，可在本次测试进程关闭泄漏检测，保留地址与未定义行为检查：
+使用新的安装目录可避免混入旧版本头文件。消费项目通过 `find_package(robmove 0.2 CONFIG REQUIRED)` 引入 `robmove::core`；回放适配器使用 `robmove::adapters`。
 
-```bash
-ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1 ctest --preset asan
-```
-
-测试包含 200 组原 Python 规划算法对照、抓放顺序、失败停止、反馈超时、连续空场、资源清理、CLI 及安装导出。普通构建无需 Python 推理依赖；可选的原算法对照生成和性能比较工具需要 NumPy/SciPy。
-
-本机规划内核中位耗时从约 **48.2 µs** 降到 **0.109 µs**。这只衡量 CPU 规划计算；端到端机器人性能尚未测试。数据和复现方法见 [性能记录](docs/migration.md#性能范围)。
-
-## 作为库使用
-
-```bash
-cmake --install build/release --prefix "$PWD/out/install"
-```
-
-消费项目设置 `CMAKE_PREFIX_PATH` 指向该目录：
-
-```cmake
-find_package(robmove CONFIG REQUIRED)
-target_link_libraries(my_app PRIVATE robmove::core)
-# 如需模拟与回放适配器，再链接 robmove::adapters
-```
-
-安装导出二进制、库和头文件；模型、CAD 与配置仍通过外部资源路径管理。
-
-## 协作开发
-
-协作者接受 GitHub 仓库邀请后，可以克隆仓库并推送自己的开发分支，再通过 Pull Request 合并到 `main`。详细步骤和提交前检查见 [协作指南](CONTRIBUTING.md)。
+开发检查也可使用 `dev` 和 `asan` 预设。详细约定见 [架构说明](docs/architecture.md)、[变更记录](docs/migration.md)、[Python 感知参考](docs/python_reference.md)；提交步骤见 [协作指南](CONTRIBUTING.md)。

@@ -7,6 +7,7 @@ endfunction()
 
 set(prefix "${ROBMOVE_BUILD}/install-smoke")
 set(consumer "${ROBMOVE_BUILD}/consumer-smoke")
+file(REMOVE_RECURSE "${prefix}" "${consumer}")
 run_checked("${CMAKE_COMMAND}" --install "${ROBMOVE_BUILD}" --prefix "${prefix}")
 run_checked("${CMAKE_COMMAND}" -S "${ROBMOVE_SOURCE}/tests/consumer" -B "${consumer}"
     "-DCMAKE_PREFIX_PATH=${prefix}" "-DCMAKE_CXX_COMPILER=${ROBMOVE_COMPILER}")

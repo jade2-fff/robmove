@@ -105,19 +105,13 @@
       "source_mtime_unix": 1785142915.2576184
     },
     {
-      "path": "examples/yolo_single_pick_place.py",
-      "bytes": 10150,
-      "sha256": "00811f988cadd75a9476b8f03701b65b0dbf2f746bdfbf0a92d96cfc459802de",
-      "source_mtime_unix": 1786526211.057233
-    },
-    {
       "path": "pick_place_pipeline/config.py",
-      "bytes": 18682,
-      "sha256": "43f0ccb8629769e706700302cd3be18f7b7242b492133dccd119c0aae0ac96bd",
+      "bytes": 6113,
+      "sha256": "de87811308edd987462eadfc0d6751a9ed94b3176bcb6ea713dd3bd26703c775",
       "source_mtime_unix": 1785142915.1256151,
       "source_sha256": "94917cbc8f28a0daafef014ee6bf03839b5376adc04faa7f99bf334dc09bad30",
       "source_bytes": 18688,
-      "modification": "2026-11-07: switch default weights to retained YOLO11n after YOLO26 removal."
+      "modification": "2026-11-07: switch default weights to retained YOLO11n after YOLO26 removal. 2026-11-07: remove actuator/grasp configuration and helpers; retain perception-only functionality."
     },
     {
       "path": "pick_place_pipeline/logger.py",
@@ -126,53 +120,29 @@
       "source_mtime_unix": 1785142915.1256151
     },
     {
-      "path": "pick_place_pipeline/main.py",
-      "bytes": 3576,
-      "sha256": "d7892bd8899c20d2ca83c0c10cb74b69dd847fcaba5bf200086df137b55dcbac",
-      "source_mtime_unix": 1785142915.1256151
-    },
-    {
-      "path": "pick_place_pipeline/motion_planning.py",
-      "bytes": 10703,
-      "sha256": "2c0d2091cd6387b6ec6a01fcc81ed27717531cc3f16de4784228a3fca14ea229",
-      "source_mtime_unix": 1785142915.1256151
-    },
-    {
-      "path": "pick_place_pipeline/navigation.py",
-      "bytes": 9774,
-      "sha256": "9dbb5ad342ce525f651d0529ca523e821b7cbf409c11e4601ce210ddac2bf581",
-      "source_mtime_unix": 1785142915.1256151
-    },
-    {
       "path": "pick_place_pipeline/perception.py",
-      "bytes": 53989,
-      "sha256": "769dcc9d52d8ece10d154f2addc8e4169a4fd399167cecdf5e1d428ed6c12fc7",
-      "source_mtime_unix": 1785142915.1256151
-    },
-    {
-      "path": "pick_place_pipeline/pick_place_task.py",
-      "bytes": 30370,
-      "sha256": "6920af8d127678e673b9c90bb20b73b3ae1472f16ccc8529307f0cc57b02ecc0",
-      "source_mtime_unix": 1785142915.1256151
-    },
-    {
-      "path": "pick_place_pipeline/task_workflows.py",
-      "bytes": 13593,
-      "sha256": "73d29c484fc1c292713ebbd4016f9389853fbcc635cb03bc089de81a7da4390a",
-      "source_mtime_unix": 1785142915.1256151
+      "bytes": 47781,
+      "sha256": "36d1788b6647dc8cb33f69e02b623790c42d08fbebbbd88c044941983dab31ef",
+      "source_mtime_unix": 1785142915.1256151,
+      "source_sha256": "769dcc9d52d8ece10d154f2addc8e4169a4fd399167cecdf5e1d428ed6c12fc7",
+      "source_bytes": 53989,
+      "modification": "2026-11-07: remove actuator/grasp configuration and helpers; retain perception-only functionality."
     },
     {
       "path": "pick_place_pipeline/utils.py",
-      "bytes": 4209,
-      "sha256": "79cb3046477cf3e56949d070c524b46e5ef9875bd517fd79252e0caf29690d13",
-      "source_mtime_unix": 1785142915.1256151
+      "bytes": 2280,
+      "sha256": "3c647b99b960cae16f046e2ac7b25c5a1b3c63bc70e665b2071a6d5bc512ff31",
+      "source_mtime_unix": 1785142915.1256151,
+      "source_sha256": "79cb3046477cf3e56949d070c524b46e5ef9875bd517fd79252e0caf29690d13",
+      "source_bytes": 4209,
+      "modification": "2026-11-07: remove actuator/grasp configuration and helpers; retain perception-only functionality."
     }
   ],
   "copied_at": "2026-11-07T11:28:24.363364+08:00",
   "destination": "/home/jade/Desktop/robmove",
   "verification": {
     "sha256_all_files_match": true,
-    "python_ast_files": 10,
+    "python_ast_files": 4,
     "cad_materials_checked": [
       "assets/objects/leshishupian/normalized.mtl",
       "assets/objects/xinlamian/normalized.mtl",
@@ -191,6 +161,84 @@
       "source_mtime_unix": 1785142915.2136173,
       "removed_at": "2026-11-07",
       "reason": "Removed at user request; defaults now use the retained YOLO11n model."
+    },
+    {
+      "path": "examples/yolo_single_pick_place.py",
+      "bytes": 10150,
+      "sha256": "00811f988cadd75a9476b8f03701b65b0dbf2f746bdfbf0a92d96cfc459802de",
+      "source_mtime_unix": 1786526211.057233,
+      "removed_at": "2026-11-07",
+      "reason": "Removed at user request with the motor-control and pick/place execution code."
+    },
+    {
+      "path": "pick_place_pipeline/main.py",
+      "bytes": 3576,
+      "sha256": "d7892bd8899c20d2ca83c0c10cb74b69dd847fcaba5bf200086df137b55dcbac",
+      "source_mtime_unix": 1785142915.1256151,
+      "removed_at": "2026-11-07",
+      "reason": "Removed at user request with the motor-control and pick/place execution code."
+    },
+    {
+      "path": "pick_place_pipeline/motion_planning.py",
+      "bytes": 10703,
+      "sha256": "2c0d2091cd6387b6ec6a01fcc81ed27717531cc3f16de4784228a3fca14ea229",
+      "source_mtime_unix": 1785142915.1256151,
+      "removed_at": "2026-11-07",
+      "reason": "Removed at user request with the motor-control and pick/place execution code."
+    },
+    {
+      "path": "pick_place_pipeline/navigation.py",
+      "bytes": 9774,
+      "sha256": "9dbb5ad342ce525f651d0529ca523e821b7cbf409c11e4601ce210ddac2bf581",
+      "source_mtime_unix": 1785142915.1256151,
+      "removed_at": "2026-11-07",
+      "reason": "Removed at user request with the motor-control and pick/place execution code."
+    },
+    {
+      "path": "pick_place_pipeline/pick_place_task.py",
+      "bytes": 30370,
+      "sha256": "6920af8d127678e673b9c90bb20b73b3ae1472f16ccc8529307f0cc57b02ecc0",
+      "source_mtime_unix": 1785142915.1256151,
+      "removed_at": "2026-11-07",
+      "reason": "Removed at user request with the motor-control and pick/place execution code."
+    },
+    {
+      "path": "pick_place_pipeline/task_workflows.py",
+      "bytes": 13593,
+      "sha256": "73d29c484fc1c292713ebbd4016f9389853fbcc635cb03bc089de81a7da4390a",
+      "source_mtime_unix": 1785142915.1256151,
+      "removed_at": "2026-11-07",
+      "reason": "Removed at user request with the motor-control and pick/place execution code."
     }
-  ]
+  ],
+  "project_cleanup": {
+    "date": "2026-11-07",
+    "reason": "Remove motor-control and pick/place code; retain perception and geometry.",
+    "removed_project_files": [
+      "benchmarks/local_result.json",
+      "benchmarks/planning_benchmark.cpp",
+      "config/simulation.json",
+      "examples/yolo_single_pick_place.py",
+      "include/robmove/adapters/simulated_robot.hpp",
+      "include/robmove/planning.hpp",
+      "include/robmove/task.hpp",
+      "include/robmove/workflow.hpp",
+      "pick_place_pipeline/main.py",
+      "pick_place_pipeline/motion_planning.py",
+      "pick_place_pipeline/navigation.py",
+      "pick_place_pipeline/pick_place_task.py",
+      "pick_place_pipeline/task_workflows.py",
+      "src/adapters/simulated_robot.cpp",
+      "src/planning.cpp",
+      "src/ports.cpp",
+      "src/task.cpp",
+      "src/workflow.cpp",
+      "tests/fixtures/planning_golden.json",
+      "tests/golden_test.cpp",
+      "tests/planning_test.cpp",
+      "tests/workflow_test.cpp",
+      "tools/compare_performance.py",
+      "tools/reference_oracle.py"
+    ]
+  }
 }

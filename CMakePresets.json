@@ -4,7 +4,7 @@
   "configurePresets": [
     {"name": "dev", "generator": "Ninja", "binaryDir": "${sourceDir}/build/dev", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug", "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"}},
     {"name": "release", "inherits": "dev", "binaryDir": "${sourceDir}/build/release", "cacheVariables": {"CMAKE_BUILD_TYPE": "Release"}},
-    {"name": "asan", "inherits": "dev", "binaryDir": "${sourceDir}/build/asan", "cacheVariables": {"ROBMOVE_SANITIZERS": "ON", "ROBMOVE_BUILD_BENCHMARKS": "OFF"}}
+    {"name": "asan", "inherits": "dev", "binaryDir": "${sourceDir}/build/asan", "cacheVariables": {"ROBMOVE_SANITIZERS": "ON"}}
   ],
   "buildPresets": [{"name": "dev", "configurePreset": "dev"}, {"name": "release", "configurePreset": "release"}, {"name": "asan", "configurePreset": "asan"}],
   "testPresets": [

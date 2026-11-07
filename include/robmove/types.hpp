@@ -21,16 +21,8 @@ struct Candidate {
     double confidence = 0;
     Pose object_pose;  // base_link <- object; inference adapters own camera transforms.
     std::optional<double> object_width;
-    // RGB-D centroid used before pose registration, if supplied by the adapter.
+    // Observed RGB-D centroid before pose registration, if supplied by the adapter.
     std::optional<Vec3> ranking_position;
-};
-
-struct GraspPlan { Pose pre_grasp; Pose grasp; bool top_down = false; };
-struct PickTarget {
-    std::string class_name;
-    double confidence;
-    GraspPlan plan;
-    std::optional<double> object_width;
 };
 
 enum class PerceptionStatus { Found, Empty, Unavailable };
@@ -39,10 +31,4 @@ struct Observation {
     std::vector<Candidate> candidates;
     std::string reason;
 };
-struct PerceptionResult {
-    PerceptionStatus status = PerceptionStatus::Unavailable;
-    std::optional<PickTarget> target;
-    std::string reason;
-};
-enum class Mode { Single, Cyclic };
 }  // namespace robmove

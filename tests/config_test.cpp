@@ -26,67 +26,60 @@ struct ConfigFile {
 };
 }
 
-TEST(default_config_retains_five_materials_and_collision_checks) {
+TEST(default_config_retains_five_materials_and_model_path) {
     const Config config;
     config.validate();
     CHECK(config.perception.objects.size() == 5);
-    CHECK(config.robot.collision_check);
-    CHECK(config.robot.arm_name == "right_arm");
-    THROWS(config.validate(Mode::Cyclic));
+    CHECK(config.perception.mask_weights == "assets/models/yolo11n-seg_finetuned.pt");
 }
 
-TEST(config_rejects_nonfinite_unsafe_widths_and_unbounded_retry_values) {
+TEST(config_rejects_invalid_perception_parameters) {
     Config config;
-    config.robot.gripper_close_width = 0.11;
+    config.perception.mask_conf_threshold = 1.1;
     THROWS(config.validate());
     config = Config{};
-    config.robot.joint_speed = std::numeric_limits<double>::quiet_NaN();
+    config.perception.input_scale = std::numeric_limits<double>::quiet_NaN();
     THROWS(config.validate());
     config = Config{};
-    config.task.perception_retries = 0;
+    config.perception.depth_median_radius = -1;
     THROWS(config.validate());
     config = Config{};
-    config.robot.home_joint_positions = std::vector<double>{};
+    config.perception.mask_weights.clear();
     THROWS(config.validate());
     config = Config{};
-    config.robot.gripper_state_poll_interval_s = 0;
+    config.perception.objects.clear();
     THROWS(config.validate());
 }
 
-TEST(config_requires_matching_arm_gripper_and_valid_navigation_poses) {
-    Config config;
-    config.robot.arm_name = "left_arm";
-    THROWS(config.validate());
-    config.robot.gripper_name = "left_gripper";
-    config.navigation.origin_pose = Pose{};
-    config.navigation.pickup_pose = Pose{};
-    config.navigation.place_pose = Pose{};
-    config.validate(Mode::Cyclic);
-    config.navigation.place_pose->orientation.coeffs().setZero();
-    THROWS(config.validate(Mode::Cyclic));
+TEST(config_rejects_motor_navigation_and_grasp_parameters) {
+    for (const std::string content : {
+             R"({"robot":{}})", R"({"navigation":{}})", R"({"task":{}})",
+             R"({"perception":{"objects":{"wulongcha":{"grasp_point_object":[0,0,0.1]}}}})"}) {
+        const ConfigFile file(content);
+        THROWS(load_config(file.file));
+    }
 }
 
 TEST(config_paths_are_independent_of_working_directory) {
-    const ConfigFile file(R"({"schema_version":1,"resource_root":"resources","robot":{"lift_height":0.2},"task":{"max_cycles":4}})");
+    const ConfigFile file(R"({"schema_version":1,"resource_root":"resources","perception":{"input_scale":0.5}})");
     const auto config = load_config(file.file);
-    NEAR(config.robot.lift_height, 0.2, 1e-12);
-    CHECK(config.task.max_cycles == 4);
+    NEAR(config.perception.input_scale, 0.5, 1e-12);
     CHECK(config.perception.mask_weights == file.directory / "resources/assets/models/yolo11n-seg_finetuned.pt");
 }
 
 TEST(config_fails_on_typos_wrong_types_duplicate_keys_and_new_schema) {
     for (const std::string content : {
-             R"({"robot":{"lift_heigth":0.2}})", R"({"task":{"max_cycles":1.5}})",
-             R"({"robot":{"collision_check":"false"}})", R"({"schema_version":2})",
-             R"({"task":{"max_cycles":2,"max_cycles":3}})",
-             R"({"task":{"max_cycles":18446744073709551615}})", R"({"task":null})"}) {
+             R"({"perception":{"input_sacle":0.2}})", R"({"perception":{"depth_median_radius":1.5}})",
+             R"({"perception":{"input_scale":true}})", R"({"schema_version":2})",
+             R"({"perception":{"input_scale":0.5,"input_scale":1}})",
+             R"({"perception":{"depth_median_radius":18446744073709551615}})", R"({"perception":null})"}) {
         const ConfigFile file(content);
         THROWS(load_config(file.file));
     }
 }
 
 TEST(config_allows_material_extension_and_rejects_bad_aliases) {
-    const ConfigFile file(R"({"perception":{"objects":{"new_box":{"mesh_path":"box.obj","grasp_point_object":[0,0,0.1],"pre_grasp_distance":0.1,"gripper_ee_distance":0.2}},"aliases":{"new box":"new_box"}}})");
+    const ConfigFile file(R"({"perception":{"objects":{"new_box":{"mesh_path":"box.obj"}},"aliases":{"new box":"new_box"}}})");
     const auto config = load_config(file.file);
     CHECK(config.perception.objects.size() == 6);
     CHECK(config.perception.aliases.at("new box") == "new_box");

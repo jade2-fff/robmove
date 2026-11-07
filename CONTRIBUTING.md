@@ -51,6 +51,6 @@ git push -u origin feature/my-change
 - 提交源码、项目配置、测试、文档及项目需要的模型和 CAD 资源。
 - 编译产物、`work/` 调试记录、虚拟环境和本机工具配置已通过 `.gitignore` 排除。
 - 登录凭据、访问令牌和私钥不得提交；本机环境变量可放在已忽略的 `.env` 文件中。
-- `pick_place_pipeline/` 和原始资源受 `migration_manifest.json` 完整性校验保护。相关变更需说明原因，并同步核实校验记录和对照测试。
+- `pick_place_pipeline/` 和原始资源受 `migration_manifest.json` 完整性校验保护。相关变更需说明原因，并同步核实校验记录和对应测试。
 
 构建依赖和工程结构见 [README](README.md)，模块边界见 [架构说明](docs/architecture.md)。现有 GitHub Actions 会在 push 和 PR 时执行 Release 与 ASan 构建及离线测试。

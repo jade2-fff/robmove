@@ -1,6 +1,7 @@
 #pragma once
 
 #include "robmove/ports.hpp"
+#include <filesystem>
 #include <istream>
 
 namespace robmove {

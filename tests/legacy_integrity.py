@@ -12,8 +12,7 @@ for item in manifest["files"]:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
     if digest != item["sha256"]:
         raise SystemExit(f"Manifest file changed: {item['path']}")
-golden = json.loads((root / "tests/fixtures/planning_golden.json").read_text())
-for name, expected in golden["source_sha256"].items():
-    if hashlib.sha256((root / name).read_bytes()).hexdigest() != expected:
-        raise SystemExit(f"Reference fixture is stale: {name}")
-print(f"Verified {len(manifest['files'])} retained files and reference-source hashes")
+for item in manifest.get("removed_files", []):
+    if (root / item["path"]).exists():
+        raise SystemExit(f"Removed file reappeared: {item['path']}")
+print(f"Verified {len(manifest['files'])} retained source and asset files")

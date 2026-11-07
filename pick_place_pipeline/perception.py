@@ -4,7 +4,7 @@
 
 主流程固定为 FoundationPose：
 - YoloDetection: YOLO-seg 分割模型，为 FoundationPose 提供种子 mask
-  （``detect_raw()`` 也供 examples/yolo_single_pick_place.py 独立使用）
+  （``detect_raw()`` 也可独立提供检测结果）
 - FoundationPoseModel: 按物料类别的 6DoF 位姿估计（GPU 本地推理）
 - Perception: 图像获取（头部双目）、内参/外参读取、多类别候选选择与位姿配准
 - HeadCameraPerception: 头部左目 RGB + FOUNDATION_STEREO 双目深度采集
@@ -32,7 +32,7 @@ from galbot_sdk.g1 import GalbotRobot, SensorType
 import numpy as np
 import cv2
 
-from utils import pixel_to_3d, pose_to_matrix, reachability_sort_key, transform_3d_point
+from utils import pixel_to_3d, pose_to_matrix, transform_3d_point
 from config import PerceptionConfig
 from logger import logger
 
@@ -104,7 +104,7 @@ class YoloDetection:
     """YOLOv8 分割/检测模型
 
     主流程用它做实例分割，选出目标后把 mask 喂给 FoundationPose；
-    examples/yolo_single_pick_place.py 通过 :meth:`detect_raw` 独立使用
+    可通过 :meth:`detect_raw` 独立获取检测结果
     （检测 + 深度图 → base_link 3D 点）。
     """
 
@@ -498,7 +498,6 @@ class FoundationPoseModel:
         fp_root: str = "/home/galbot/FoundationPose",
         target_class: str = "bottle",
         input_scale: float = 1.0,
-        grasp_point_object: Tuple[float, float, float] = (0.0, 0.0, 0.0),
     ):
         p = Path(mesh_path)
         if not p.is_absolute():
@@ -507,7 +506,6 @@ class FoundationPoseModel:
         self.fp_root = fp_root
         self.target_class = target_class
         self.input_scale = input_scale
-        self.grasp_point_object = grasp_point_object
         self._fp = None
 
     def load(self) -> None:
@@ -593,7 +591,7 @@ class FoundationPoseModel:
         本方法，避免每个类别各自重复执行分割和 GPU 位姿估计。
 
         Returns:
-            (grasp_pose_cam, mask_width_px)
+            (object_pose_cam, mask_width_px)
         """
         if self._fp is None:
             raise RuntimeError("模型未加载，请先调用 load()")
@@ -693,38 +691,6 @@ class FoundationPoseModel:
                 cv2.LINE_AA,
             )
 
-    @classmethod
-    def _draw_grasp_point(
-        cls,
-        image: np.ndarray,
-        K: np.ndarray,
-        pose_cam: np.ndarray,
-        grasp_point_object: Tuple[float, float, float],
-    ) -> None:
-        """在图像上绘制 grasp_point_object 变换到相机系后的投影位置。"""
-        point_cam = pose_cam @ np.array([*grasp_point_object, 1.0])
-        point_px = cls._project_point(K, point_cam[:3])
-        if point_px is None:
-            return
-        cv2.drawMarker(
-            image,
-            point_px,
-            (255, 0, 255),
-            markerType=cv2.MARKER_CROSS,
-            markerSize=18,
-            thickness=2,
-        )
-        cv2.circle(image, point_px, 9, (255, 0, 255), 2)
-        cv2.putText(
-            image,
-            "Grasp",
-            (point_px[0] + 10, point_px[1] - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            (255, 0, 255),
-            2,
-            cv2.LINE_AA,
-        )
 
     def _save_debug_result(
         self,
@@ -733,7 +699,7 @@ class FoundationPoseModel:
         pose_cam: np.ndarray,
         K: np.ndarray,
     ) -> None:
-        """保存 FoundationPose 的 mask、物体位姿坐标轴和抓取点可视化。"""
+        """保存 FoundationPose 的 mask 和物体位姿坐标轴可视化。"""
         output_dir = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "output"
         )
@@ -745,7 +711,6 @@ class FoundationPoseModel:
             np.uint8
         )
         self._draw_pose_axes(vis, K, pose_cam)
-        self._draw_grasp_point(vis, K, pose_cam, self.grasp_point_object)
 
         save_path = os.path.join(output_dir, f"foundationpose_pose_{timestamp}.png")
         cv2.imwrite(save_path, vis)
@@ -774,20 +739,17 @@ class Perception:
         self,
         config: Optional[PerceptionConfig] = None,
         detection_model: Optional[YoloDetection] = None,
-        arm_name: str = "right_arm",
         debug_mode: bool = False,
     ):
         """
         Args:
             config: 感知配置，None 则使用默认配置
-            detection_model: 仅供 examples/yolo_single_pick_place.py 注入
+            detection_model: 可注入独立的
                 YoloDetection 复用相机读取能力；主流程不传，创建 FoundationPose
                 多类别感知链路。
-            arm_name: 目标机械臂名称
             debug_mode: 是否启用调试模式（可视化、详细日志等）
         """
         self.config = config or PerceptionConfig()
-        self.arm_name = arm_name
         self.debug_mode = debug_mode
         # 取图/内参/相机外参统一走头部相机链路
         self._head_camera = HeadCameraPerception(
@@ -823,7 +785,6 @@ class Perception:
                 fp_root=self.config.fp_root,
                 target_class=class_name,
                 input_scale=self.config.fp_input_scale,
-                grasp_point_object=object_config.grasp_point_object,
             )
 
     def load_model(self) -> None:
@@ -950,10 +911,10 @@ class Perception:
     def detect_foundationpose_candidates(
         self, robot: GalbotRobot
     ) -> List[FoundationPoseCandidate]:
-        """拍摄一帧并返回按可达顺序选出的 FoundationPose 候选。
+        """拍摄一帧并返回按检测置信度选出的 FoundationPose 候选。
 
         分割模型先在全部 ``foundationpose_objects`` 类别中找实例；按
-        ``base_link`` 坐标选出最易到达的一个，再仅对该实例执行一次较慢的
+        检测置信度选出一个，再仅对该实例执行一次较慢的
         FoundationPose 配准。有效空场返回空列表，链路故障抛出明确异常。
         """
 
@@ -1018,20 +979,18 @@ class Perception:
             point_base = (
                 transform_base_camera @ np.append(point_cam, 1.0)
             )[:3]
-            key = reachability_sort_key(
-                point_base, raw.confidence, self.arm_name
-            )
+            key = -raw.confidence
             ranked_candidates.append((key, raw, point_base))
 
         if not ranked_candidates:
             raise PerceptionUnavailableError(
-                "YOLO 找到候选，但候选深度均无效，无法执行 x/y 可达性排序"
+                "YOLO 找到候选，但候选深度均无效，无法估计物体位置"
             )
 
         ranked_candidates.sort(key=lambda item: item[0])
         for rank, (_, raw, point_base) in enumerate(ranked_candidates, start=1):
             logger.info(
-                "YOLO 抓取候选排序: "
+                "YOLO 感知候选排序: "
                 f"rank={rank}, class={raw.class_name}, "
                 f"conf={raw.confidence:.2f}, "
                 f"base={np.round(point_base, 3).tolist()}"
@@ -1084,34 +1043,6 @@ class Perception:
         )
         return [candidate]
 
-    def save_grasp_debug_image(self, pose_base_grasp: np.ndarray) -> Optional[str]:
-        """保存最终抓取位姿（base_link 系）的调试可视化，与物体原始姿态图分开存放。
-
-        FoundationPoseModel._save_debug_result 画的是 FoundationPose 给出的物体
-        原始姿态；这里画的是 PickPlaceTask 规划出的夹爪最终姿态（接近方向/夹爪
-        坐标轴），两者在竖立情形下接近但不相同，斜躺情形下差异更明显。仅在
-        debug_mode 下调用，且要求上一次 detect_* 调用已缓存 rgb/K/相机变换。
-        """
-        if not self.debug_mode:
-            return None
-        rgb = getattr(self, "_last_rgb", None)
-        K = getattr(self, "_last_K", None)
-        transform_base_camera = getattr(self, "_last_transform_base_camera", None)
-        if rgb is None or K is None or transform_base_camera is None:
-            logger.warning("缺少上一帧的 rgb/K/相机变换缓存，跳过抓取姿态可视化")
-            return None
-
-        pose_cam_grasp = np.linalg.inv(transform_base_camera) @ pose_base_grasp
-        vis = rgb.copy()
-        FoundationPoseModel._draw_pose_axes(vis, K, pose_cam_grasp)
-
-        output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
-        os.makedirs(output_dir, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        save_path = os.path.join(output_dir, f"grasp_plan_{timestamp}.png")
-        cv2.imwrite(save_path, vis)
-        logger.info(f"抓取姿态（夹爪最终朝向）可视化已保存: {save_path}")
-        return save_path
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -1280,91 +1211,3 @@ class HeadCameraPerception:
                 f"status={extrinsic_status}"
             )
         return pose_to_matrix(pose)
-
-
-# ══════════════════════════════════════════════════════════════════
-# 测试运行示例（可直接运行）
-# ══════════════════════════════════════════════════════════════════
-
-if __name__ == "__main__":
-    """
-    感知模块测试程序
-
-    运行方式：
-        cd pick_place_pipeline
-        python perception.py
-
-    功能：
-        1. 根据配置初始化多类别 FoundationPose 感知链路
-        2. 连接机器人（需确保机器人已启动）
-        3. 获取 RGB + 深度图像
-        4. 检测目标并输出抓取位姿
-    """
-    import sys
-    from galbot_sdk.g1 import GalbotRobot
-
-    print("=" * 60)
-    print("感知模块测试程序")
-    print("=" * 60)
-
-    # 1. 创建配置
-    config = PerceptionConfig()
-    arm_name = "right_arm"
-    debug_mode = True
-
-    # 2. 创建 FoundationPose 感知实例
-    print("\n[1/5] 初始化感知模块...")
-    perception = Perception(config=config, arm_name=arm_name, debug_mode=debug_mode)
-    print("  - 使用模型: FoundationPose")
-    print(f"  - 目标手臂: {perception.arm_name}")
-
-    # 3. 加载模型
-    print("\n[2/5] 加载 FoundationPose 模型...")
-    perception.load_model()
-    print("  - 模型加载完成")
-
-    # 4. 连接机器人并初始化对应手臂的传感器
-    print("\n[3/5] 连接机器人...")
-    try:
-        robot = GalbotRobot()
-
-        robot.init({SensorType.HEAD_LEFT_CAMERA}, True)
-        time.sleep(4)
-        print("  - 机器人连接成功，已启用头部相机 HEAD_LEFT_CAMERA")
-
-    except Exception as e:
-        print(f"  ⚠ 机器人连接失败: {e}")
-        print("\n提示：请确保机器人已启动并可连接。")
-        print("如无机器人，可使用模拟图像测试模型（需自行实现）。")
-        sys.exit(1)
-
-    # 5. 检测目标
-    print("\n[4/5] 开始检测目标...")
-    try:
-        candidates = perception.detect_foundationpose_candidates(robot)
-        if candidates:
-            best = candidates[0]
-            print("\n✅ 检测成功！")
-            print(f"  类别: {best.class_name}")
-            print(f"  物体位姿(base_link): {best.pose_base[:3, 3]}")
-            print(f"  物体宽度: {best.obj_width_m}")
-        else:
-            print("\n❌ 未检测到有效目标")
-            print("请调整目标位置或光照条件后重试。")
-
-    except KeyboardInterrupt:
-        print("\n\n用户中断测试")
-    except Exception as e:
-        print(f"\n❌ 检测过程出错: {e}")
-        import traceback
-
-        traceback.print_exc()
-
-    print("\n[5/5] 清理资源...")
-    robot.request_shutdown()
-    robot.wait_for_shutdown()
-    robot.destroy()
-
-    print("\n" + "=" * 60)
-    print("测试结束")
-    print("=" * 60)

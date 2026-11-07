@@ -1,9 +1,0 @@
-{
-  "schema_version": 1,
-  "resource_root": "..",
-  "navigation": {
-    "origin_pose": [0, 0, 0, 0, 0, 0, 1],
-    "pickup_pose": [1, 0, 0, 0, 0, 0, 1],
-    "place_pose": [2, 0, 0, 0, 0, 0, 1]
-  }
-}

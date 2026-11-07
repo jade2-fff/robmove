@@ -1,24 +1,19 @@
 #include "robmove/adapters/replay.hpp"
-#include "robmove/adapters/simulated_robot.hpp"
-#include "robmove/workflow.hpp"
+#include "robmove/config.hpp"
+#include "robmove/geometry.hpp"
 #include <nlohmann/json.hpp>
 
-#include <csignal>
 #include <fstream>
 #include <iostream>
-#include <memory>
 #include <set>
 
 namespace {
 using namespace robmove;
 using Json = nlohmann::json;
-volatile std::sig_atomic_t interrupted = 0;
-void on_signal(int) { interrupted = 1; }
 
 struct Options {
-    std::filesystem::path config, replay, trace;
-    Mode mode = Mode::Single;
-    bool demo = false, json = false, realtime = false, validate = false, help = false, version = false;
+    std::filesystem::path config, replay;
+    bool demo = false, json = false, validate = false, help = false, version = false;
 };
 
 Options parse(int argc, char** argv) {
@@ -34,15 +29,8 @@ Options parse(int argc, char** argv) {
         };
         if (arg == "--config") options.config = value();
         else if (arg == "--replay") options.replay = value();
-        else if (arg == "--trace") options.trace = value();
-        else if (arg == "--mode") {
-            const auto mode = value();
-            if (mode == "single") options.mode = Mode::Single;
-            else if (mode == "cyclic") options.mode = Mode::Cyclic;
-            else throw std::invalid_argument("mode must be single or cyclic");
-        } else if (arg == "--demo") options.demo = true;
+        else if (arg == "--demo") options.demo = true;
         else if (arg == "--json") options.json = true;
-        else if (arg == "--realtime") options.realtime = true;
         else if (arg == "--validate-config") options.validate = true;
         else if (arg == "--help" || arg == "-h") options.help = true;
         else if (arg == "--version") options.version = true;
@@ -51,93 +39,80 @@ Options parse(int argc, char** argv) {
     if (options.demo && !options.replay.empty()) throw std::invalid_argument("choose --demo or --replay");
     if (!options.help && !options.version && !options.validate && !options.demo && options.replay.empty())
         throw std::invalid_argument("choose --demo or --replay FILE");
-    if (!options.trace.empty()) {
-        for (const auto& input : {options.config, options.replay})
-            if (!input.empty() && std::filesystem::weakly_canonical(input) == std::filesystem::weakly_canonical(options.trace))
-                throw std::invalid_argument("trace must not overwrite an input file");
-    }
     return options;
 }
 
-class ConsoleEvents final : public EventSink {
-public:
-    explicit ConsoleEvents(bool json) : json_(json) {}
-    void emit(const Event& event) noexcept override {
-        try {
-            if (json_) std::cout << Json{{"type", "event"}, {"backend", "simulated"}, {"state", to_string(event.state)},
-                                        {"cycle", event.cycle}, {"placed_count", event.placed_count},
-                                        {"elapsed_s", event.elapsed_s}, {"message", event.message}}.dump() << '\n';
-            else std::cout << '[' << to_string(event.state) << "] placed=" << event.placed_count << ' ' << event.message << '\n';
-            std::cout.flush();
-        } catch (...) { failed_ = true; }
+const char* status_name(PerceptionStatus status) {
+    switch (status) {
+        case PerceptionStatus::Found: return "found";
+        case PerceptionStatus::Empty: return "empty";
+        case PerceptionStatus::Unavailable: return "unavailable";
     }
-    bool failed() const noexcept { return failed_ || !std::cout; }
-private:
-    bool json_, failed_ = false;
-};
+    throw std::invalid_argument("invalid perception status");
+}
 
-void write_trace(const std::filesystem::path& path, const SimulatedRobot& robot) {
-    Json trace = Json::array();
-    for (const auto& command : robot.commands()) {
-        Json entry{{"operation", command.operation}, {"blocking", command.blocking},
-                   {"collision_check", command.collision_check}, {"lock_heading", command.lock_heading}};
-        if (command.pose) entry["pose"] = pose_to_array(*command.pose);
-        if (command.width) entry["width_m"] = *command.width;
-        if (!command.joints.empty()) entry["joints_rad"] = command.joints;
-        trace.push_back(std::move(entry));
+Json candidate_json(const Candidate& candidate) {
+    Json result{{"class_name", candidate.class_name}, {"confidence", candidate.confidence},
+                {"pose_base", pose_to_array(candidate.object_pose)}};
+    if (candidate.object_width) result["object_width_m"] = *candidate.object_width;
+    if (candidate.ranking_position) {
+        const auto& point = *candidate.ranking_position;
+        result["ranking_position_base"] = {point.x(), point.y(), point.z()};
     }
-    std::ofstream output(path);
-    if (!output) throw std::runtime_error("cannot open trace output: " + path.string());
-    output << trace.dump(2) << '\n';
-    output.close();
-    if (!output) throw std::runtime_error("failed to write trace output");
+    return result;
 }
 }  // namespace
 
 int main(int argc, char** argv) {
     try {
         const auto options = parse(argc, argv);
-        if (options.version) { std::cout << "robmove 0.1.0\n"; return 0; }
+        if (options.version) { std::cout << "robmove 0.2.0\n"; return 0; }
         if (options.help) {
-            std::cout << "robmove: offline C++ pick/place workflow (simulated robot only)\n"
+            std::cout << "robmove: offline perception and object-pose replay\n"
                          "Usage: robmove --demo|--replay FILE [options]\n"
-                         "  --mode single|cyclic   Task mode (default: single)\n"
-                         "  --config FILE         Strict JSON configuration\n"
+                         "  --config FILE         Strict perception configuration\n"
                          "  --validate-config     Validate configuration and exit\n"
-                         "  --json                Emit JSON Lines events and summary\n"
-                         "  --trace FILE          Write simulated commands as JSON\n"
-                         "  --realtime            Use real waits instead of a virtual clock\n"
+                         "  --json                Emit JSON Lines observations and summary\n"
                          "  --help, --version\n";
             return 0;
         }
-        auto config = options.config.empty() ? Config{} : load_config(options.config);
-        config.validate(options.mode);
+        const auto config = options.config.empty() ? Config{} : load_config(options.config);
+        config.validate();
         if (options.validate) {
-            if (options.json) std::cout << Json{{"type", "config"}, {"valid", true}, {"materials", config.perception.objects.size()}}.dump() << '\n';
-            else std::cout << "Configuration valid\n";
-            return 0;
+            if (options.json) std::cout << Json{{"type", "config"}, {"valid", true},
+                                               {"materials", config.perception.objects.size()}}.dump() << '\n';
+            else std::cout << "Perception configuration valid\n";
+            return std::cout ? 0 : 1;
         }
-        std::signal(SIGINT, on_signal);
-        std::signal(SIGTERM, on_signal);
-        SimulatedRobot robot;
-        ReplayPerception perception = options.demo ? ReplayPerception(demo_frames()) : ReplayPerception(options.replay);
-        std::unique_ptr<Clock> clock;
-        if (options.realtime) clock = std::make_unique<SteadyClock>();
-        else clock = std::make_unique<VirtualClock>();
-        ConsoleEvents events(options.json);
-        if (!options.json) std::cout << "SIMULATION: no robot connection or model inference\n";
-        Workflow workflow(std::move(config), robot, perception, *clock, &events, [] { return interrupted != 0; });
-        const auto result = workflow.run(options.mode);
-        if (!options.trace.empty()) write_trace(options.trace, robot);
+        std::vector<Observation> frames;
+        if (options.demo) frames = demo_frames();
+        else {
+            std::ifstream input(options.replay);
+            if (!input) throw std::runtime_error("cannot open replay: " + options.replay.string());
+            frames = read_replay(input);
+        }
+        std::size_t detections = 0, unavailable = 0;
+        for (std::size_t index = 0; index < frames.size(); ++index) {
+            const auto& frame = frames[index];
+            detections += frame.candidates.size();
+            if (frame.status == PerceptionStatus::Unavailable) ++unavailable;
+            Json candidates = Json::array();
+            for (const auto& candidate : frame.candidates) candidates.push_back(candidate_json(candidate));
+            Json observation{{"type", "observation"}, {"backend", "replay"}, {"index", index},
+                             {"status", status_name(frame.status)}, {"reason", frame.reason},
+                             {"candidates", std::move(candidates)}};
+            if (options.json) std::cout << observation.dump() << '\n';
+            else std::cout << "Frame " << index << ": " << status_name(frame.status)
+                           << ", candidates=" << observation["candidates"].dump() << '\n';
+        }
         if (options.json) {
-            std::cout << Json{{"type", "summary"}, {"backend", "simulated"}, {"success", result.success},
-                              {"placed_count", result.placed_count}, {"held", result.held}, {"cancelled", result.cancelled},
-                              {"custody", to_string(result.custody)}, {"reason", result.reason}}.dump() << '\n';
+            std::cout << Json{{"type", "summary"}, {"backend", "replay"}, {"frames", frames.size()},
+                              {"detections", detections}, {"unavailable_frames", unavailable}}.dump() << '\n';
         } else {
-            std::cout << (result.success ? "DONE" : "HOLD") << ": placed=" << result.placed_count
-                      << ", custody=" << to_string(result.custody) << ", " << result.reason << '\n';
+            std::cout << "Frames=" << frames.size() << ", detections=" << detections
+                      << ", unavailable=" << unavailable << '\n';
         }
-        if (events.failed()) return 1;
-        return result.cancelled ? 130 : result.success ? 0 : 2;
+        if (!std::cout) return 1;
+        return frames.empty() || unavailable > 0 ? 2 : 0;
     } catch (const std::exception& error) { std::cerr << "robmove: " << error.what() << '\n'; return 1; }
 }
