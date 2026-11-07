@@ -2,7 +2,7 @@
   "seed": 20261107,
   "source_sha256": {
     "pick_place_pipeline/pick_place_task.py": "6920af8d127678e673b9c90bb20b73b3ae1472f16ccc8529307f0cc57b02ecc0",
-    "pick_place_pipeline/config.py": "94917cbc8f28a0daafef014ee6bf03839b5376adc04faa7f99bf334dc09bad30"
+    "pick_place_pipeline/config.py": "43f0ccb8629769e706700302cd3be18f7b7242b492133dccd119c0aae0ac96bd"
   },
   "cases": [
     {

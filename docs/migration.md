@@ -36,7 +36,7 @@ Galbot SDK 调用、相机采集、双目深度推理、YOLO 分割、Foundation
 
 `tools/reference_oracle.py` 只从原 Python 文件提取指定的纯算法 AST 节点，不导入 SDK 或运行真实动作。固定随机种子生成 200 组原算法结果，覆盖五类物料、左右臂、直立、倒伏、倒置、阈值附近和随机姿态。
 
-`tests/golden_test.cpp` 对比 pre_grasp、grasp、lift_safe、抓取分支，位置和旋转角误差阈值为 `1e-9`。比较四元数所代表的旋转，允许 q 和 -q 等价。参考文件记录原源码 SHA-256；`legacy_integrity` 同时检查迁移清单中的 28 个原文件没有改变。
+`tests/golden_test.cpp` 对比 pre_grasp、grasp、lift_safe、抓取分支，位置和旋转角误差阈值为 `1e-9`。比较四元数所代表的旋转，允许 q 和 -q 等价。参考文件记录用于生成对照数据的源码 SHA-256；`legacy_integrity` 同时检查迁移清单中当前保留的 27 个文件与已记录哈希一致。
 
 正常构建直接读取已生成的参考数据，不需要 NumPy、SciPy 或 Galbot SDK。重生成参考数据时才需要原算法的 NumPy/SciPy 开发环境：
 
@@ -45,6 +45,8 @@ python3 tools/reference_oracle.py
 ```
 
 ## 本机验证记录
+
+2026-11-07 按用户要求移除 `yolo26s-seg_finetuned.pt`（23,353,255 字节），C++ 和 Python 默认模型均切换为现有的 `yolo11n-seg_finetuned.pt`。迁移清单保留已删除资源的信息及修改前的配置来源哈希，规划对照数据同步更新配置哈希。此次调整不改变规划算法，未运行真实模型推理或机器人动作。
 
 - GCC 13.3.0、CMake 3.28.3、Eigen 3、nlohmann/json 3.11.3。
 - Debug / Release 下执行核心行为测试、命令行集成测试、原始文件哈希检查。

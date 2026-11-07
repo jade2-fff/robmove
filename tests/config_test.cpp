@@ -71,7 +71,7 @@ TEST(config_paths_are_independent_of_working_directory) {
     const auto config = load_config(file.file);
     NEAR(config.robot.lift_height, 0.2, 1e-12);
     CHECK(config.task.max_cycles == 4);
-    CHECK(config.perception.mask_weights == file.directory / "resources/assets/models/yolo26s-seg_finetuned.pt");
+    CHECK(config.perception.mask_weights == file.directory / "resources/assets/models/yolo11n-seg_finetuned.pt");
 }
 
 TEST(config_fails_on_typos_wrong_types_duplicate_keys_and_new_schema) {

@@ -44,7 +44,7 @@
   },
   "perception": {
     "mask_conf_threshold": 0.40,
-    "mask_weights": "assets/models/yolo26s-seg_finetuned.pt",
+    "mask_weights": "assets/models/yolo11n-seg_finetuned.pt",
     "foundationpose_root": "",
     "input_scale": 1.0,
     "depth_median_radius": 5

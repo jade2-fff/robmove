@@ -56,7 +56,7 @@ struct NavigationConfig {
 
 struct PerceptionConfig {
     double mask_conf_threshold = 0.40;
-    std::filesystem::path mask_weights = "assets/models/yolo26s-seg_finetuned.pt";
+    std::filesystem::path mask_weights = "assets/models/yolo11n-seg_finetuned.pt";
     std::filesystem::path foundationpose_root;
     double input_scale = 1;
     int depth_median_radius = 5;

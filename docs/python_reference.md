@@ -25,13 +25,13 @@ FoundationPose是外部工程。`config.py` 中的 `fp_root` 当前指向机器�
 - `/home/galbot/FoundationPose/weights/2023-10-28-18-33-37/model_best.pth`
 - `/home/galbot/FoundationPose/weights/2024-01-11-20-02-45/model_best.pth`
 
-迁移保留了原配置内容。代码中的动作入口会调用真实机械臂和夹爪，执行前需要完成环境适配、运动参数核对和现场安全确认。此次只做源码、资源和静态完整性检查。
+迁移时保留了原配置内容；移除 YOLO26 权重后，当前默认分割模型已改为保留的 YOLO11n。代码中的动作入口会调用真实机械臂和夹爪，执行前需要完成环境适配、运动参数核对和现场安全确认。模型切换只做离线配置和完整性检查，未验证机器人上的推理效果。
 
 ## 接入透明瓶模型前需处理的事项
 
-1. 当前主模型为 `yolo26s-seg_finetuned.pt`，物料配置覆盖乌龙茶、纸巾、薯片、方便面和可乐。前面训练的 `clear_bottle` 检测模型仍需与深度定位、抓取姿态和夹爪参数对接。
+1. 当前默认模型为 `yolo11n-seg_finetuned.pt`，物料配置覆盖乌龙茶、纸巾、薯片、方便面和可乐。前面训练的 `clear_bottle` 检测模型仍需与深度定位、抓取姿态和夹爪参数对接。
 2. 主程序注释推荐的 `examples/single_pick_place.py` 和 `examples/cyclic_pick_place.py` 在原机缺失。当前可定位的实际入口是上述 `main.py` 与 `yolo_single_pick_place.py`。
 3. 独立YOLO示例的命令行默认目标拼为 `leshishupin`，配置类别为 `leshishupian`。调用时应明确填写与模型一致的实际类别名。
 4. 主流程默认目标位姿运动的 `collision_check=False`，导航位姿默认未配置。集成时需按实际工位审查这些设置。
 
-资源及代码的来源哈希记录在 `migration_manifest.json`，用于核对迁移完整性。
+资源及代码的当前校验哈希记录在 `migration_manifest.json`；修改过的文件另保留来源哈希，移除的资源记录在 `removed_files`，用于追溯迁移后的调整。

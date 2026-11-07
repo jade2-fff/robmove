@@ -9,12 +9,6 @@
       "source_mtime_unix": 1786521012.462964
     },
     {
-      "path": "assets/models/yolo26s-seg_finetuned.pt",
-      "bytes": 23353255,
-      "sha256": "d9cedf947fa0478b69de466185bb080be0cb53f660d64ddcff170bc4d778a1cd",
-      "source_mtime_unix": 1785142915.2136173
-    },
-    {
       "path": "assets/objects/chouzhi/chouzhi.jpg",
       "bytes": 1196861,
       "sha256": "d3d412f53985623148e204f85cde569adc04af6110446811977b861451992428",
@@ -118,9 +112,12 @@
     },
     {
       "path": "pick_place_pipeline/config.py",
-      "bytes": 18688,
-      "sha256": "94917cbc8f28a0daafef014ee6bf03839b5376adc04faa7f99bf334dc09bad30",
-      "source_mtime_unix": 1785142915.1256151
+      "bytes": 18682,
+      "sha256": "43f0ccb8629769e706700302cd3be18f7b7242b492133dccd119c0aae0ac96bd",
+      "source_mtime_unix": 1785142915.1256151,
+      "source_sha256": "94917cbc8f28a0daafef014ee6bf03839b5376adc04faa7f99bf334dc09bad30",
+      "source_bytes": 18688,
+      "modification": "2026-11-07: switch default weights to retained YOLO11n after YOLO26 removal."
     },
     {
       "path": "pick_place_pipeline/logger.py",
@@ -183,6 +180,17 @@
       "assets/objects/chouzhi/normalized.mtl",
       "assets/objects/kekoukele/normalized.mtl"
     ],
-    "robot_execution_tested": false
-  }
+    "robot_execution_tested": false,
+    "manifest_scope": "current_retained_files"
+  },
+  "removed_files": [
+    {
+      "path": "assets/models/yolo26s-seg_finetuned.pt",
+      "bytes": 23353255,
+      "sha256": "d9cedf947fa0478b69de466185bb080be0cb53f660d64ddcff170bc4d778a1cd",
+      "source_mtime_unix": 1785142915.2136173,
+      "removed_at": "2026-11-07",
+      "reason": "Removed at user request; defaults now use the retained YOLO11n model."
+    }
+  ]
 }

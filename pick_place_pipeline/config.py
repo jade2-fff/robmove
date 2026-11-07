@@ -83,9 +83,9 @@ class PerceptionConfig:
     # FoundationPose 用分割模型生成种子 mask。该模型只负责分割，不参与
     # 抓取方向规划；抓取位姿始终来自 FoundationPose 的 6DoF 结果。
     mask_conf_threshold: float = 0.40
-    mask_weights: str = "assets/models/yolo26s-seg_finetuned.pt"
+    mask_weights: str = "assets/models/yolo11n-seg_finetuned.pt"
 
-    # 当前 yolo26s 微调权重把类别名保存为英文描述；主流程用短类别名作为
+    # 兼容将类别名保存为英文描述的微调权重；主流程用短类别名作为
     # FoundationPose CAD 配置 key，因此这里做一次归一化映射。
     yolo_class_aliases: Dict[str, str] = field(
         default_factory=lambda: {
